@@ -1,0 +1,94 @@
+import streamlit as st
+import yfinance as yf
+import matplotlib.pyplot as plt
+
+# Set the app title
+st.title("NVIDIA Stock Analysis - Extended")
+st.write("""
+This app provides a detailed analysis of NVIDIA's stock performance, including financial metrics, trading volume trends, 
+moving averages, and a custom date range analysis.
+""")
+
+# Function to load NVIDIA data
+@st.cache_data
+def load_data(ticker):
+    stock = yf.Ticker(ticker)
+    history = stock.history(period="1y")  # 1-year historical data
+    info = stock.info  # Financial information
+    return history, info
+
+# Load NVIDIA data
+ticker_symbol = "NVDA"
+data, stock_info = load_data(ticker_symbol)
+
+# Display financial information
+st.subheader("1. Financial Overview")
+if stock_info:
+    st.write(f"**Market Cap:** ${stock_info.get('marketCap', 'N/A'):,}")
+    st.write(f"**P/E Ratio (Trailing):** {stock_info.get('trailingPE', 'N/A')}")
+    st.write(f"**P/B Ratio:** {stock_info.get('priceToBook', 'N/A')}")
+    st.write(f"**Dividend Yield:** {stock_info.get('dividendYield', 0) * 100:.2f}%")
+    st.write(f"**EPS (Trailing):** ${stock_info.get('trailingEps', 'N/A')}")
+else:
+    st.error("Unable to retrieve NVIDIA's financial data.")
+
+# Plot historical closing prices
+st.subheader("2. Stock Price Trend")
+plt.figure(figsize=(10, 6))
+plt.plot(data.index, data["Close"], label="Close Price", color="blue")
+plt.title("NVIDIA Stock Price (Last 1 Year)")
+plt.xlabel("Date")
+plt.ylabel("Price (USD)")
+plt.grid(True)
+plt.legend()
+st.pyplot(plt)
+
+# Trading Volume Analysis
+st.subheader("3. Trading Volume Analysis")
+plt.figure(figsize=(10, 6))
+plt.bar(data.index, data["Volume"], label="Trading Volume", color="orange", alpha=0.6)
+plt.title("NVIDIA Trading Volume (Last 1 Year)")
+plt.xlabel("Date")
+plt.ylabel("Volume")
+plt.grid(True)
+plt.legend()
+st.pyplot(plt)
+
+# Moving Averages
+st.subheader("4. Moving Averages")
+data["20_MA"] = data["Close"].rolling(window=20).mean()
+data["50_MA"] = data["Close"].rolling(window=50).mean()
+plt.figure(figsize=(10, 6))
+plt.plot(data.index, data["Close"], label="Close Price", color="blue")
+plt.plot(data.index, data["20_MA"], label="20-Day MA", color="green")
+plt.plot(data.index, data["50_MA"], label="50-Day MA", color="red")
+plt.title("NVIDIA Stock Price with Moving Averages")
+plt.xlabel("Date")
+plt.ylabel("Price (USD)")
+plt.grid(True)
+plt.legend()
+st.pyplot(plt)
+
+# Handle custom date range
+st.subheader("Custom Date Range Analysis")
+
+# Date inputs
+start_date = st.date_input("Start Date", value=data.index.min().date())
+end_date = st.date_input("End Date", value=data.index.max().date())
+
+# Remove timezone information from data index
+data.index = data.index.tz_localize(None)
+
+if start_date < end_date:
+    filtered_data = data.loc[start_date:end_date]
+    st.line_chart(filtered_data["Close"])
+else:
+    st.error("End date must be after start date.")
+
+
+# Summary
+st.subheader("Summary")
+st.write("""
+NVIDIA is a leading player in the GPU market, with strong performance in gaming, AI, and data centers.
+Its stock has shown significant volatility over the past year but remains a favorite among tech investors.
+""")
